@@ -50,16 +50,9 @@ var books = [
 ];
 
 
-
-
-
-
-
 ////////////////////
 //  ROUTES
 ///////////////////
-
-
 
 
 // define a root route: localhost:3000/
@@ -70,11 +63,15 @@ app.get('/', function (req, res) {
 // get all books
 app.get('/api/books', function (req, res) {
   // send all books as JSON response
-  db.Book.find(function(err, books){
-    if (err) { return console.log("index error: " + err); }
-    res.json(books);
-  });
+  db.Book.find()
+    // populate fills in the author id with all the author data
+    .populate('author')
+    .exec(function(err, books){
+      if (err) { return console.log("index error: " + err); }
+      res.json(books);
+    });
 });
+
 
 // get one book
 app.get('/api/books/:id', function (req, res) {
@@ -86,12 +83,24 @@ app.get('/api/books/:id', function (req, res) {
 // create new book
 app.post('/api/books', function (req, res) {
   // create new book with form data (`req.body`)
-  console.log('books create', req.body);
-  var newBook = new db.Book(req.body);
-  newBook.save(function handleDBBookSaved(err, savedBook) {
-    res.json(savedBook);
+ var newBook = new db.Book({
+    title: req.body.title,
+    image: req.body.image,
+    releaseDate: req.body.releaseDate,
   });
 });
+
+ db.Author.findOne({name: req.body.author}, function(err, author){
+    newBook.author = author;
+    // add newBook to database
+    newBook.save(function(err, book){
+      if (err) {
+        return console.log("create error: " + err);
+      }
+      console.log("created ", book.title);
+      res.json(book);
+    });
+  });
 
 // update book
 // app.put('/api/books/:id', controllers.books.update);
@@ -110,8 +119,6 @@ app.delete('/api/books/:id', function (req, res) {
   books.splice(deleteBookIndex, 1);
   res.json(bookToDelete);
 });
-
-
 
 
 
